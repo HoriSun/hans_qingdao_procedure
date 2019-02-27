@@ -9,3 +9,14 @@ class LineManager(object):
         
     def connect(self):
         pass
+                
+    def init(self):
+        pass
+        
+    def clean_up(self):
+        pass
+        
+    #====== type-specific functions ======#
+    
+    def stop_line(self):
+        pass

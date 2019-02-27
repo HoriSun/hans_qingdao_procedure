@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
 
 class Log(object):
     # import logging
@@ -27,3 +28,14 @@ def curdir():
 
 def pydir():
     return os.path.split(os.path.realpath(__file__))[0]
+    
+def check_ip_correct(ip):
+    pattern = r'^(([0-9]{1,3}\.){3}([0-9]{1,3}))$'
+    m = re.match(pattern,ip)
+    if(m):
+        n = map(lambda x:int(x),ip.split('.'))
+        #print n
+        return all(map(lambda x:0<=x<=255,n))
+    else:
+        return False
+    

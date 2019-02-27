@@ -33,6 +33,12 @@ class QingDaoProcedure(object):
         self.__star_manager = StarManager()
         self.__line_left_manager = LineManager( side = "left" )
         self.__line_right_manager = LineManager( side = "right" )
+        
+        self.__managers = [ self.__agv_manager ,
+                            self.__star_manager ,
+                            self.__line_left_manager ,
+                            self.__line_right_manager ]
+        
         pass
     
     
@@ -165,11 +171,10 @@ class QingDaoProcedure(object):
             self.__line_right_manager.update_param(config_data["line_right"])
         
     def __connect_all(self):
-        self.__agv_manager.connect()
-        self.__star_manager.connect()
-        self.__line_left_manager.connect()
-        self.__line_right_manager.connect()
-        
+        # [ TODO ] Better make this asyncronized
+        for m in self.__managers:
+            m.connect()
+            
     def __start_scheduling(self):
         self.__schedule_thread = threading.Thread( target = self.__schedule_loop )
         self.__schedule_thread.setDaemon(True)
@@ -199,11 +204,46 @@ class QingDaoProcedure(object):
             time.sleep( for_a_day )
         
     def __schedule_loop(self):
+        self.__init_all()
+        
+        # alias
+        lline = self.__line_left_manager
+        rline = self.__line_right_manager
+        agv = self.__agv_manager
+        star = self.__star_manager
+        
+        while True:
+            
+            pass
+        
         pass
         
+    def __init_all(self):
+        # [ TODO ] Better make this asyncronized
+        for m in self.__managers:
+            m.init()
         
+        # [ TODO ] ### Move them to the init position
+        # alias
+        lline = self.__line_left_manager
+        rline = self.__line_right_manager
+        agv = self.__agv_manager
+        star = self.__star_manager
+        
+        lline.stop_line()
+        rline.stop_line()
+        agv.stop_line()
+        agv.go_right()
+        star.go_right()
+            
+        star.check_goods()
+            
     def __clean_up(self):
-        pass
+        # [ TODO ] Better make this asyncronized
+        for m in self.__managers:
+            m.clean_up()
+    
+    
     
 if "__main__" == __name__:
 
