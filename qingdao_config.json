@@ -1,0 +1,43 @@
+{
+    
+    "agv": {
+        "connection": {
+            "addr": "192.168.0.3",
+            "port": {
+                "state": 8888,
+                "control": 8889,
+                "task": 8890,
+                "config": 8891
+            }
+        }
+    },
+    
+    "star": {
+        "connection": {
+            "addr": "192.168.0.168",
+            "port": {
+                "modbus": 502
+            }
+        }
+    },
+    
+    "line_left": {
+        "connection": {
+            "addr": "192.168.0.100",
+            "port": {
+                "modbus": 502
+            }
+        }
+    }, 
+    
+    
+    "line_left": {
+        "connection": {
+            "addr": "192.168.0.101",
+            "port": {
+                "modbus": 502
+            }
+        }
+    }
+    
+}
