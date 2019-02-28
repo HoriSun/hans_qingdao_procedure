@@ -22,6 +22,25 @@ class Log(object):
         cls.warn = warn
         cls.error = error
         
+def log_wrap(prefix=None):
+    if(not prefix):
+        return Log
+    else:
+        class LogWrap(object):
+            @staticmethod
+            def debug(s, *args, **kwargs):
+                Log.debug(prefix+s, *args, **kwargs)
+            @staticmethod
+            def info(s, *args, **kwargs):
+                Log.info(prefix+s, *args, **kwargs)
+            @staticmethod
+            def warn(s, *args, **kwargs):
+                Log.warn(prefix+s, *args, **kwargs)
+            @staticmethod
+            def error(s, *args, **kwargs):
+                Log.error(prefix+s, *args, **kwargs)
+        return LogWrap
+            
 
 def curdir():
     return os.path.abspath(os.path.curdir)

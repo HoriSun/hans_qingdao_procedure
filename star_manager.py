@@ -1,11 +1,46 @@
-from utils import Log
+from utils import log_wrap, check_ip_correct
+from json_proc import dumps_json
 
 class StarManager(object):
     def __init__(self):
+        self.Log = log_wrap(prefix = "[ Star Manager ] ")
+        self.__set_default_param()
         pass
         
+    def __set_default_param(self):
+        self.__param = {
+            "connection": {
+                "addr": "192.168.0.168",
+                "port": {
+                    "modbus": 502
+                }
+            }
+        }
+        
     def update_param(self, config_data=None):
-        pass
+        if(not config_data):
+            return
+            
+        if("connection" in config_data):
+            conn = config_data["connection"]
+            if("addr" in conn):
+                addr = conn["addr"]
+                if(check_ip_correct(addr)):
+                    self.__param["connection"]["addr"] = addr
+            if("port" in conn):
+                port = conn["port"]
+                if(isinstance(port, dict)):
+                    if("modbus" in port):
+                        if(isinstance(port["modbus"], int)):
+                            self.__param["connection"]["port"]["modbus"] = port["modbus"]
+        #print dumps_json(self.__param, indent=None, sort_keys=False)
+        
+        json_param_final = dumps_json( self.__param , 
+                                       indent = 4 ,  # None for one-line output
+                                       sort_keys = False )
+        self.Log.info("parameters: ")
+        for line in json_param_final.split("\n"):
+            self.Log.info('    '+line)
         
     def connect(self):
         pass
