@@ -127,6 +127,26 @@ class QingDaoProcedure(object):
                         "task": 8890,
                         "config": 8891
                     }
+                },
+                "station": {
+                    "right": {
+                        "virtual": {
+                            "ready": 22,
+                            "line": 12,
+                        },
+                        "mag": {
+                            "line": 2
+                        }
+                    },
+                    "left": {
+                        "virtual": {
+                            "ready": 21,
+                            "line": 11,
+                        },
+                        "mag": {
+                            "line": 1
+                        }
+                    }
                 }
             },
             
@@ -213,7 +233,10 @@ class QingDaoProcedure(object):
         star = self.__star_manager
         
         while True:
-            
+            agv.leave_right()
+            agv.go_left()
+            agv.leave_left()
+            agv.go_right()
             pass
         
         pass
@@ -233,7 +256,9 @@ class QingDaoProcedure(object):
         lline.stop_line()
         rline.stop_line()
         agv.stop_line()
+        
         agv.go_right()
+        
         star.go_right()
             
         star.check_goods()

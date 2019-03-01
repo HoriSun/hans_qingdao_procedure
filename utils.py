@@ -3,6 +3,7 @@
 
 import os
 import re
+import math
 
 class Log(object):
     # import logging
@@ -58,3 +59,23 @@ def check_ip_correct(ip):
     else:
         return False
     
+    
+def angle_diff(a,b):
+    pi2 = math.pi * 2
+    #print a
+    #print b
+    a = a % pi2
+    b = b % pi2
+    d = a - b
+    #print a,b
+    if (d < 0):
+        d += pi2
+    if (d > math.pi):
+        #print pi2, d
+        d = pi2 - d
+    return d
+
+
+def abs(a):
+    return -a if a<0 else a
+        

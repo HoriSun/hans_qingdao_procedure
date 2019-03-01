@@ -9,6 +9,34 @@
                 "task": 8890,
                 "config": 8891
             }
+        },
+        "station": {
+            "right": {
+                "virtual": {
+                    "ready": 22,
+                    "line": 12
+                },
+                "mag": {
+                    "line": 2
+                }
+            },
+            "left": {
+                "virtual": {
+                    "ready": 21,
+                    "line": 11
+                },
+                "mag": {
+                    "line": 1
+                }
+            }
+        },
+        "sensor": {
+            "detect_front": 11,
+            "detect_middle": 12,
+            "detect_back": 13
+        },
+        "control": {
+            "stop_line": 14
         }
     },
     
