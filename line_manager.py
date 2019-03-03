@@ -1,16 +1,16 @@
 from utils import log_wrap, check_ip_correct
 from json_proc import dumps_json
 
+from line_adapter import LineAdapter
+
 class LineManager(object):
 
-    __name_map = { "left":"Left", "right":"Right" }
-
-    def __init__(self, side=""):
-        assert(side in ["left","right"]) # should log and shutdown elegantly
-        self.Log = log_wrap(prefix = "[ Line %s Manager ] "
-                                     ""%(self.__name_map[side]))
-        self.__side = side
+    def __init__(self):
+        self.Log = log_wrap(prefix = "[ Line Manager ] ")
         self.__set_default_param()
+        self.__adapter = LineAdapter(self.__param["connection"]["addr"],
+                                     self.__param["connection"]["port"]["keyence"])
+        self.__running = True
         pass
         
     def __set_default_param(self):
@@ -18,7 +18,7 @@ class LineManager(object):
             "connection": {
                 "addr": "192.168.0.100",
                 "port": {
-                    "modbus": 502
+                    "keyence": 8501
                 }
             }
         }
@@ -26,38 +26,44 @@ class LineManager(object):
     def update_param(self, config_data=None):
         if(not config_data):
             return
+
+        self.__param = config_data
             
-        if("connection" in config_data):
-            conn = config_data["connection"]
-            if("addr" in conn):
-                addr = conn["addr"]
-                if(check_ip_correct(addr)):
-                    self.__param["connection"]["addr"] = addr
-            if("port" in conn):
-                port = conn["port"]
-                if(isinstance(port, dict)):
-                    if("modbus" in port):
-                        if(isinstance(port["modbus"], int)):
-                            self.__param["connection"]["port"]["modbus"] = port["modbus"]
-        #print dumps_json(self.__param, indent=None, sort_keys=False)
-        
         json_param_final = dumps_json( self.__param , 
                                        indent = 4 ,  # None for one-line output
                                        sort_keys = False )
         self.Log.info("parameters: ")
         for line in json_param_final.split("\n"):
             self.Log.info('    '+line)
+            
+        self.__adapter.update_param(self.__param["connection"]["addr"],
+                                    self.__param["connection"]["port"]["keyence"])
+        if(self.__adapter.is_connected()):
+            self.__adapter.reconnect()
         
     def connect(self):
-        pass
+        if(self.__adapter.is_connected()):
+            self.__adapter.reconnect()
+        else:
+            self.__adapter.connect()
                 
     def init(self):
-        pass
+        self.__adapter.roll_stop()
+        self.__adapter.power_on()
+        self.__adapter.state_update_start()
         
     def clean_up(self):
-        pass
+        self.__running = False
+        self.stop_line()
+        self.__adapter.state_update_stop()
         
     #====== type-specific functions ======#
     
     def stop_line(self):
-        pass
+        self.__adapter.roll_stop()
+        
+    def wait_state(self, device, sensor, state):
+        sensor_id = "line_"+device+"_sensor_"+sensor
+        while(self.__running and self.__adapter.data[sensor_id] != state):
+            time.sleep(0.1)
+            

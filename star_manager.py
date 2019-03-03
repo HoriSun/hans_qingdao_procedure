@@ -10,7 +10,7 @@ class StarManager(object):
     def __set_default_param(self):
         self.__param = {
             "connection": {
-                "addr": "192.168.0.168",
+                "addr": "127.0.0.1",
                 "port": {
                     "modbus": 502
                 }
@@ -67,4 +67,10 @@ class StarManager(object):
     def play_sound(self, sound_id=0, repeat_time=0):
         pass
         
-    
+
+        
+def test():
+    m = StarManager()
+        
+if __name__ == "__main__":
+    test()

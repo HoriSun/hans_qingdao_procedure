@@ -266,18 +266,32 @@ class AgvAdapter(object):
             return ret
         self.wait_task(target_f)
     
-    def go_mag_block(self,rfid):
-        self.go_mag_unblock(rfid)
+    def go_mag_block(self,rfid,turn="RIGHT",direction="FRONT"):
+        self.go_mag_unblock(rfid, turn, direction)
         self.wait_mag(rfid)
 
-    def go_mag_unblock(self,rfid):
+    def go_mag_unblock(self,rfid,turn="RIGHT",direction="FRONT"):
+        assert(turn in ["LEFT","RIGHT"])
+        assert(direction in ["FRONT","BACK"])
+        
+        # [ TRICK ][begin] Switch the mag sensor to be used
+        #self.Log.info("[go_mag_unblock] Switch the mag sensor to be used")
+        #self.trigger_button_stop()
+        #self.call( self.port_info["task"]["client"], add_mag_task(rfid, turn, direction) )
+        #time.sleep(1)
+        #self.Log.info("[go_mag_unblock] Cancel all tasks")
+        #self.cancel_all_tasks()
+        #self.Log.info("[go_mag_unblock] Trigger reset button")
+        #self.trigger_button_reset()
+        # [ TRICK ][end] Switch the mag sensor to be used
+        
         self.trigger_button_run()
         
-        self.rotate_find_tape()
+        #self.rotate_find_tape()
         
         self.switch_auto()
 
-        return self.call( self.port_info["task"]["client"], add_mag_task(rfid) )
+        return self.call( self.port_info["task"]["client"], add_mag_task(rfid, turn, direction) )
 
     
     def wait_mag(self, node=-1):
@@ -340,16 +354,21 @@ class AgvAdapter(object):
         
         if(self.__monitoring):
             return
-        
+      
         def monitor_state_loop():
+            self.__monitor_data_recv = False
             while(self.__running and self.__monitoring):
                 agv_state = self.get_state()
                 if(agv_state):
                     self.__agv_state = agv_state
-                self.__monitor_data_recv = True
-                time.sleep(0.2)
+                    self.__monitor_data_recv = True
+                    #self.Log.info("[monitor_state_loop] onMagTrack = %s"%(agv_state["onMagTrack"]))
+                else:
+                    self.Log.error("Cannot get AGV state.")
+                time.sleep(0.1)
         
         self.__monitoring = True
+        self.__monitor_data_recv = False
         self.state_monitor_thread = self.daemon_thread( target = monitor_state_loop ,
                                                         name = "monitor_state_loop" )
         
@@ -468,12 +487,13 @@ class AgvAdapter(object):
         
         while(not self.__monitor_data_recv):
             time.sleep(0.1)
-
+            
         track_found = False
 
         if(not self.__agv_state["onMagTrack"]):
             track_found = False
             angle_ori = self.__agv_state["angle"]
+            #self.Log.info("[rotate_find_tape] onMagTrack = %s"%(self.__agv_state["onMagTrack"]))
             self.switch_manual()
 
             for dend, dspeed in [[ -1*angle_range, -1 ],
@@ -527,14 +547,15 @@ class AgvAdapter(object):
             self.set_one_output(index, switch)
 
     def get_one_input(self, index):
-        return self.call( self.port_info["state"]["client"], get_input(index) )
+        #return self.call( self.port_info["state"]["client"], get_input(index) )
+        return self.port_info["state"]["client"].call(get_input(index))
             
     def get_input_one_by_one(self, indexes):
         ret = {}
         for index in indexes:
             while(self.__running):
                 try:
-                    __res = get_one_intput(index)
+                    __res = self.get_one_input(index)
                     data = json.loads(__res)["data"]
                     state = data["state"]
                     break

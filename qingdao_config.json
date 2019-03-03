@@ -18,6 +18,10 @@
                 },
                 "mag": {
                     "line": 2
+                },
+                "face": {
+                    "ready": "front",
+                    "line": "back"
                 }
             },
             "left": {
@@ -27,12 +31,16 @@
                 },
                 "mag": {
                     "line": 1
+                },
+                "face": {
+                    "ready": "front",
+                    "line": "front"
                 }
             }
         },
         "sensor": {
-            "detect_front": 11,
-            "detect_middle": 12,
+            "detect_front": 12,
+            "detect_middle": 22,
             "detect_back": 13
         },
         "control": {
@@ -49,23 +57,13 @@
         }
     },
     
-    "line_left": {
+    "line": {
         "connection": {
-            "addr": "192.168.0.100",
+            "addr": "192.168.0.10",
             "port": {
-                "modbus": 502
+                "keyence": 8501
             }
         }
-    }, 
-    
-    
-    "line_right": {
-        "connection": {
-            "addr": "192.168.0.101",
-            "port": {
-                "modbus": 502
-            }
-        }
-    }
+    } 
     
 }

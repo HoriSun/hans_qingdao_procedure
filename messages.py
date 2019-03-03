@@ -41,15 +41,17 @@ add_target_free_task = lambda i:'''
     "id": "100"
 }'''%i
 
-add_mag_task = lambda i:'''
+add_mag_task = lambda i,turn,direction:'''
 {
     "method": "AddMagTask",
     "params": {
         "taskId": 1,
-        "target": "%d"
+        "target": "%d",
+        "turn": "%s",
+        "direction": "%s"
     },
     "id": "100"
-}'''%i
+}'''%(i,turn,direction)
 
 robot_reloc = lambda x,y,angle:'''
 {

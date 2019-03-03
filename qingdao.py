@@ -9,7 +9,7 @@ from json_proc import loadf_json
 from log_manager import LogManager
 from system_check import check_system
 from define import SystemEnum
-from utils import Log, pydir
+from utils import log_wrap, pydir
 from agv_manager import AgvManager
 from star_manager import StarManager
 from line_manager import LineManager
@@ -21,6 +21,8 @@ class QingDaoProcedure(object):
                   log_dir = 'log' ,
                   archive_dir = 'log_archive' ,
                   max_log_size = 4096 ):
+        self.Log = log_wrap(prefix = "[ Qingdao Procedure ] ")
+        
         # [ TODO ] Set default value of parameters here
         self.__root_dir = root_dir
         self.__log_dir = os.path.join(self.__root_dir,log_dir)
@@ -31,13 +33,12 @@ class QingDaoProcedure(object):
                                          self.__max_log_size )
         self.__agv_manager = AgvManager()
         self.__star_manager = StarManager()
-        self.__line_left_manager = LineManager( side = "left" )
-        self.__line_right_manager = LineManager( side = "right" )
+        self.__line_manager = LineManager()
         
         self.__managers = [ self.__agv_manager ,
-                            self.__star_manager ,
-                            self.__line_left_manager ,
-                            self.__line_right_manager ]
+                            #self.__star_manager ,
+                            #self.__line_manager 
+                          ]
         
         pass
     
@@ -52,11 +53,11 @@ class QingDaoProcedure(object):
         try:
             running_on_windows = (check_system() == SystemEnum.WINDOWS)
         except AssertionError as e:
-            Log.error("[ Runner.__check_instance ] "
+            self.Log.error("[ Runner.__check_instance ] "
                       "Assertion error: %s"%repr(e))
             logging.exception(e)
         except Exception as e:
-            Log.error("[ Runner.__check_instance ] "
+            self.Log.error("[ Runner.__check_instance ] "
                       "Unexpected error: %s"%repr(e))
             logging.exception(e)
 
@@ -68,10 +69,10 @@ class QingDaoProcedure(object):
             self.__tmux = win32event.CreateMutex(None, False, "navigation")
             last_error = win32api.GetLastError()
             if last_error == ERROR_ALREADY_EXISTS:
-                Log.error("exit running instance! name = " + "navigation")
+                self.Log.error("exit running instance! name = " + "navigation")
                 raise RuntimeError("exit running instancel!")
         else:
-            Log.error("[ Runner.__check_instance ] "
+            self.Log.error("[ Runner.__check_instance ] "
                       "(running_on_windows == %s) "
                       "Not running on Windows, "
                       "__check_instance() won't do anything. "
@@ -94,7 +95,7 @@ class QingDaoProcedure(object):
                                     "r" )
             except Exception as e:
                 config_file = None
-                Log.warn("Config file `%s` open error, "
+                self.Log.warn("Config file `%s` open error, "
                          "using default configurations. "
                          "The file may not exist. "
                          "Error message: `%s`"%(config_file_name,e))
@@ -104,7 +105,7 @@ class QingDaoProcedure(object):
                     config_data = loadf_json(config_file)
                 except Exception as e:
                     config_data = None
-                    Log.warn("Config file `%s` parsing error, "
+                    self.Log.warn("Config file `%s` parsing error, "
                              "using default configurations. "
                              "Please check the format of your config file. "
                              "Error message: `%s`"%(config_file_name,e))
@@ -159,21 +160,11 @@ class QingDaoProcedure(object):
                 }
             },
             
-            "line_left": {
+            "line": {
                 "connection": {
                     "addr": "192.168.0.100",
                     "port": {
-                        "modbus": 502
-                    }
-                }
-            }, 
-            
-            
-            "line_right": {
-                "connection": {
-                    "addr": "192.168.0.101",
-                    "port": {
-                        "modbus": 502
+                        "keyence": 8501
                     }
                 }
             }
@@ -183,12 +174,10 @@ class QingDaoProcedure(object):
     def __update_param(self, config_data):
         if("agv" in config_data):
             self.__agv_manager.update_param(config_data["agv"])
-        if("star" in config_data):
-            self.__star_manager.update_param(config_data["star"])
-        if("line_left" in config_data):
-            self.__line_left_manager.update_param(config_data["line_left"])
-        if("line_right" in config_data):
-            self.__line_right_manager.update_param(config_data["line_right"])
+        #if("star" in config_data):
+        #    self.__star_manager.update_param(config_data["star"])
+        #if("line" in config_data):
+        #    self.__line_manager.update_param(config_data["line"])
         
     def __connect_all(self):
         # [ TODO ] Better make this asyncronized
@@ -209,7 +198,7 @@ class QingDaoProcedure(object):
         
     def __block(self):
         def exit(signum, frame):
-            Log.info("Program stopped by the user. "
+            self.Log.info("Program stopped by the user. "
                      "signum:%s, frame:%s"
                      ""%(signum, frame))
             self.__clean_up()
@@ -227,8 +216,7 @@ class QingDaoProcedure(object):
         self.__init_all()
         
         # alias
-        lline = self.__line_left_manager
-        rline = self.__line_right_manager
+        line = self.__line_manager
         agv = self.__agv_manager
         star = self.__star_manager
         
@@ -248,21 +236,25 @@ class QingDaoProcedure(object):
         
         # [ TODO ] ### Move them to the init position
         # alias
-        lline = self.__line_left_manager
-        rline = self.__line_right_manager
+        line = self.__line_manager
         agv = self.__agv_manager
         star = self.__star_manager
         
-        lline.stop_line()
-        rline.stop_line()
+        self.Log.info("Start initialize device states")
+        
+        
+        #line.stop_line()
         agv.stop_line()
         
         agv.go_right()
         
-        star.go_right()
+        #star.go_right()
             
-        star.check_goods()
-            
+        #star.check_goods()
+        
+        self.Log.info("Initialized.")
+        
+        
     def __clean_up(self):
         # [ TODO ] Better make this asyncronized
         for m in self.__managers:

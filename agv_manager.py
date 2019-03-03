@@ -87,111 +87,7 @@ class AgvManager(object):
         if(not config_data):
             return
             
-        if("connection" in config_data):
-            conn = config_data["connection"]
-            if("addr" in conn):
-                addr = conn["addr"]
-                if(check_ip_correct(addr)):
-                    self.__param["connection"]["addr"] = addr
-            if("port" in conn):
-                port = conn["port"]
-                if(isinstance(port, dict)):
-                    if("state" in port):
-                        if(isinstance(port["state"], int)):
-                            self.__param["connection"]["port"]["state"] = port["state"]
-                    
-                    if("control" in port):
-                        if(isinstance(port["control"], int)):
-                            self.__param["connection"]["port"]["control"] = port["control"]
-                    
-                    if("task" in port):
-                        if(isinstance(port["task"], int)):
-                            self.__param["connection"]["port"]["task"] = port["task"]
-                    
-                    if("config" in port):
-                        if(isinstance(port["config"], int)):
-                            self.__param["connection"]["port"]["config"] = port["config"]
-                
-        #print dumps_json(self.__param, indent=None, sort_keys=False)
-        
-        if("station" in config_data):
-            station = config_data["station"]
-            if("right" in station):
-                right = station["right"]
-                if(isinstance(right, dict)):
-                    if("virtual" in station):
-                        virtual = right["virtual"]
-                        if(isinstance(virtual, dict)):
-                            if("ready" in virtual):
-                                ready = virtual["ready"]
-                                if(isinstance(ready, int)):
-                                    self.__param["station"]["right"]["virtual"]["ready"] = ready
-                            if("line" in virtual):
-                                line = virtual["line"]
-                                if(isinstance(line, int)):
-                                    self.__param["station"]["right"]["virtual"]["line"] = line
-                    if("mag" in station):
-                        mag = right["mag"]
-                        if(isinstance(mag, dict)):
-                            if("ready" in mag):
-                                ready = mag["ready"]
-                                if(isinstance(ready, int)):
-                                    self.__param["station"]["right"]["mag"]["ready"] = ready
-                            if("line" in mag):
-                                line = mag["line"]
-                                if(isinstance(line, int)):
-                                    self.__param["station"]["right"]["mag"]["line"] = line
-            if("left" in station):
-                left = station["left"]
-                if(isinstance(left, dict)):
-                    if("virtual" in station):
-                        virtual = left["virtual"]
-                        if(isinstance(virtual, dict)):
-                            if("ready" in virtual):
-                                ready = virtual["ready"]
-                                if(isinstance(ready, int)):
-                                    self.__param["station"]["left"]["virtual"]["ready"] = ready
-                            if("line" in virtual):
-                                line = virtual["line"]
-                                if(isinstance(line, int)):
-                                    self.__param["station"]["left"]["virtual"]["line"] = line
-                    if("mag" in station):
-                        mag = left["mag"]
-                        if(isinstance(mag, dict)):
-                            if("ready" in mag):
-                                ready = mag["ready"]
-                                if(isinstance(ready, int)):
-                                    self.__param["station"]["left"]["mag"]["ready"] = ready
-                            if("line" in mag):
-                                line = mag["line"]
-                                if(isinstance(line, int)):
-                                    self.__param["station"]["left"]["mag"]["line"] = line
-                            
-        if("sensor" in config_data):
-            sensor = config_data["sensor"]
-            if(isinstance(sensor, dict)):
-                if("detect_front" in sensor):
-                    detect_front = sensor["detect_front"]
-                    if(isinstance(detect_front, int) and detect_front >= 0):
-                        self.__param["sensor"]["detect_front"] = detect_front
-                if("detect_middle" in sensor):
-                    detect_middle = sensor["detect_middle"]
-                    if(isinstance(detect_middle, int) and detect_middle >= 0):
-                        self.__param["sensor"]["detect_middle"] = detect_middle
-                if("detect_back" in sensor):
-                    detect_back = sensor["detect_back"]
-                    if(isinstance(detect_back, int) and detect_back >= 0):
-                        self.__param["sensor"]["detect_back"] = detect_back
-        
-        if("control" in config_data):
-            control = config_data["control"]
-            if(isinstance(control, dict)):
-                if("stop_line" in control):
-                    stop_line = control["stop_line"]
-                    if(isinstance(stop_line, int) and stop_line >= 0):
-                        self.__param["control"]["stop_line"] = stop_line
-        
-        
+        self.__param = config_data
         
         json_param_final = dumps_json( self.__param , 
                                        indent = 4 ,  # None for one-line output
@@ -211,7 +107,7 @@ class AgvManager(object):
         pass
         
     def init(self):
-        self.__adapter.get_input_callback(self.__param["sensor"].values(), io_callback)
+        #self.__adapter.get_input_callback(self.__param["sensor"].values(), self.io_callback, 0.1)
         self.__adapter.trigger_button_reset()
         self.__adapter.trigger_button_run()
         # [ TODO ] Make sure localization is correct
@@ -224,33 +120,85 @@ class AgvManager(object):
         
     #====== type-specific functions ======#
         
+    def face_different(self, station):
+        face = self.__param["station"][station]["face"]
+        # [ TODO ] Check the spelling error in "face" ("front", "back"). This may lead to bugs
+        return (face["ready"] != face["line"])
+        
+    def face_adapt(self, station):
+        face = self.__param["station"][station]["face"]
+        face_ready = face["ready"]
+        face_line = face["line"]
+        if(face_ready == "back"):
+            self.__adapter.rotate(-0.4, -math.pi)
+        self.__adapter.rotate_find_tape()
+        if(face_line == "back"):
+            self.go_mag_wait(station, force_direction="FRONT")
+            self.__adapter.rotate(-0.4, -math.pi)
+            self.__adapter.rotate_find_tape()
+        pass
+        
     def go_right(self):
-        fixed_node = self.__param["station"]["right"]["virtual"]["ready"]
-        mag_node = self.__param["station"]["right"]["mag"]["line"]
+        station = "right"
+        self.Log.info("go_right()")
+        fixed_node = self.__param["station"][station]["virtual"]["ready"]
         self.__adapter.go_fixed_unblock( fixed_node )
         self.__adapter.wait_fixed( fixed_node )
-        self.__adapter.go_mag_unblock( mag_node )
-        self.__adapter.wait_mag( mag_node )
+        self.face_adapt(station)
+        #if(self.face_different("right")):
+        #    self.Log.info("right face different, rotating 180 degrees")
+        #    self.__adapter.rotate(-0.4, -math.pi)
+        self.go_mag_wait(station)
+        
         #self.__adapter.go_fixed_unblock(self.__param["station"]["right"]["virtual"]["line"])
 
     def go_left(self):
-        fixed_node = self.__param["station"]["left"]["virtual"]["ready"]
-        mag_node = self.__param["station"]["left"]["mag"]["line"]
+        station = "left"
+        self.Log.info("go_left()")
+        fixed_node = self.__param["station"][station]["virtual"]["ready"]
         self.__adapter.go_fixed_unblock( fixed_node )
         self.__adapter.wait_fixed( fixed_node )
-        self.__adapter.go_mag_unblock( mag_node )
-        self.__adapter.wait_mag( mag_node )
-        self.__adapter.rotate(-0.4, -math.pi)
-        self.__adapter.go_straight(-0.1, -0.1)
+        self.face_adapt(station)
+        #if(self.face_different("left")):
+        #    self.Log.info("left face different, rotating 180 degrees")
+        #    self.__adapter.rotate(-0.4, -math.pi)
+        self.go_mag_wait(station)
+        #self.__adapter.rotate(-0.4, -math.pi)
+        #self.__adapter.go_straight(-0.1, -0.1)
         #self.__adapter.go_fixed_unblock(self.__param["station"]["right"]["virtual"]["line"])
 
+    def go_mag_wait(self, station, force_turn="", force_direction=""):
+        self.Log.info("go_mag_wait(%s)"%(repr(station)))
+        station_info = self.__param["station"][station]
+        
+        mag_node = station_info["mag"]["line"]
+        turn = "RIGHT"
+        direction = "FRONT" 
+        
+        if(force_direction):
+            direction = force_direction
+        else:
+            if(station_info["face"]["line"] == "front"):
+                direction = "FRONT"
+            else: # [ TODO ] Check undefined values and log an error
+                direction = "BACK"
+        
+        self.__adapter.go_mag_unblock( mag_node, turn, direction )
+        self.__adapter.wait_mag( mag_node )
+        
+    def leave_action(self, station):
+        station_info = self.__param["station"][station]
+        if(station_info["face"]["line"] == "front"):
+            self.__adapter.go_straight(-0.3, -0.3)
+        else:
+            self.__adapter.go_straight(0.3, 0.3)
+        
         
     def leave_right(self):
-        self.__adapter.go_straight(-0.3, -0.3)
-        self.__adapter.rotate(-0.4, -math.pi)
+        self.leave_action("right")
         
     def leave_left(self):
-        self.__adapter.go_straight(0.3, 0.3)
+        self.leave_action("left")
         
     def stop_line(self):
         self.__adapter.set_one_output(self.__param["control"]["stop_line"], True)
