@@ -35,7 +35,7 @@ class QingDaoProcedure(object):
         self.__star_manager = StarManager()
         self.__line_manager = LineManager()
         
-        self.__managers = [ self.__agv_manager ,
+        self.__managers = [ #self.__agv_manager ,
                             #self.__star_manager ,
                             self.__line_manager 
                           ]
@@ -66,7 +66,7 @@ class QingDaoProcedure(object):
             import win32api
             from winerror import ERROR_ALREADY_EXISTS
 
-            self.__tmux = win32event.CreateMutex(None, False, "navigation")
+            self.__tmux = win32event.CreateMutex(None, False, "navigation.temp.line")
             last_error = win32api.GetLastError()
             if last_error == ERROR_ALREADY_EXISTS:
                 self.Log.error("exit running instance! name = " + "navigation")
@@ -172,8 +172,8 @@ class QingDaoProcedure(object):
         }
 
     def __update_param(self, config_data):
-        if("agv" in config_data):
-            self.__agv_manager.update_param(config_data["agv"])
+        #if("agv" in config_data):
+        #    self.__agv_manager.update_param(config_data["agv"])
         #if("star" in config_data):
         #    self.__star_manager.update_param(config_data["star"])
         if("line" in config_data):
@@ -192,9 +192,7 @@ class QingDaoProcedure(object):
     def start(self):
         self.__log_manager.archive_and_cleanup()
         self.__check_instance()
-        self.Log.info("connecting all devices")
         self.__connect_all()
-        self.Log.info("start main process")
         self.__start_scheduling()
         self.__block()
         
@@ -222,54 +220,16 @@ class QingDaoProcedure(object):
         agv = self.__agv_manager
         star = self.__star_manager
         
-        self.Log.info("entering loop")
-        
         while True:
-            
-            line.wait_sensor_state("left","end",1)
-            line.line_roll_left_start()
-            line.wait_sensor_state("left","middle",1)
-            if(line.get_sensor_state("left","agv")!=1):
-                #agv.go_left()
-                self.Log.info("AGV is not at the left station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
-                line.wait_sensor_state("left","agv",1)
-            agv.start_line()
-            line.wait_sensor_state("left","front",1)
-            agv.wait_sensor_state("front",1)
-            agv.wait_sensor_state("middle",1)
-            
-            agv.stop_line()
-            line.line_roll_left_stop()
-            
-            agv.leave_left()
-            
-            agv.go_right()
-            
-            if(line.get_sensor_state("right","agv")!=1):
-                #agv.go_left()
-                self.Log.info("AGV is not at the right station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
-                line.wait_sensor_state("right","agv",1)
-            
-            line.line_roll_right_start()
-            agv.start_line()
-            agv.wait_sensor_state("middle",1)
-            agv.wait_sensor_state("back",1)
-            line.wait_sensor_state("right","front",1)
-            line.wait_sensor_state("right","middle",1)
-            agv.stop_line()
-            line.wait_sensor_state("right","end",1)
-            line.line_roll_right_stop()
-            
-            agv.leave_right()
-            agv.go_left()
+            #agv.leave_right()
+            #agv.go_left()
+            #agv.leave_left()
+            #agv.go_right()
             pass
-            
         
         pass
         
     def __init_all(self):
-        self.Log.info("doing device initialization")
-        
         # [ TODO ] Better make this asyncronized
         for m in self.__managers:
             m.init()
@@ -284,20 +244,9 @@ class QingDaoProcedure(object):
         
         
         line.stop_line()
-        agv.stop_line()
+        #agv.stop_line()
         
-        time.sleep(0.3)
-        
-        
-        ###### [ TODO ] This is not safe. Use a safer method.
-        if(line.get_sensor_state("left","agv")):
-            agv.leave_left()
-        
-        if(line.get_sensor_state("right","agv")):
-            agv.leave_right()
-        
-        
-        agv.go_left()
+        #agv.go_right()
         
         #star.go_right()
             
@@ -313,7 +262,6 @@ class QingDaoProcedure(object):
     
     
     
-    
 if "__main__" == __name__:
 
     bytes_per_day_guess = 600 * 1024 * 1024  # means 600MB per day
@@ -321,8 +269,8 @@ if "__main__" == __name__:
     max_size = bytes_per_day_guess * log_keep_day
 
     proc = QingDaoProcedure( root_dir = pydir(),
-                             log_dir = "log",
-                             archive_dir = "log_archive",
+                             log_dir = "log.temp.line",
+                             archive_dir = "log_archive.temp.line",
                              max_log_size = max_size )
     proc.load_config( config_file_name = "qingdao_config.json" )
     proc.start()

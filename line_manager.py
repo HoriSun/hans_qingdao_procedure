@@ -2,6 +2,8 @@ from utils import log_wrap, check_ip_correct
 from json_proc import dumps_json
 
 from line_adapter import LineAdapter
+import time
+import threading
 
 class LineManager(object):
 
@@ -11,6 +13,10 @@ class LineManager(object):
         self.__adapter = LineAdapter(self.__param["connection"]["addr"],
                                      self.__param["connection"]["port"]["keyence"])
         self.__running = True
+        self.__line_rolling_left = False
+        self.__line_rolling_right = False
+        self.__line_roll_thread_left = None
+        self.__line_roll_thread_right = None
         pass
         
     def __set_default_param(self):
@@ -48,13 +54,67 @@ class LineManager(object):
             self.__adapter.connect()
                 
     def init(self):
+        self.Log.info("initializing")
         self.__adapter.roll_stop()
         self.__adapter.power_on()
         self.__adapter.state_update_start()
+        self.Log.info("initialized")
+        #self.__adapter.left_roll_backward()
+            
+        #while(True):
+        #    self.__adapter.left_roll_backward()
+        #    time.sleep(0.1)
+        #    break
+        #while(True):
+        #
+        #    self.__adapter.left_roll_backward()
+        #    time.sleep(0.1)
         
+        
+    def line_roll_left_step(self):
+        self.__adapter.left_roll_forward()
+        
+    def line_roll_left_loop(self):
+        while(self.__running and self.__line_rolling_left):
+            self.line_roll_left_step()
+            time.sleep(0.1)
+    
+    def line_roll_left_start(self):
+        self.__line_rolling_left = True
+        self.__line_roll_thread_left = threading.Thread( target = self.line_roll_left_loop )
+        self.__line_roll_thread_left.setDaemon(True)
+        self.__line_roll_thread_left.start()
+    
+    def line_roll_left_stop(self):
+        self.__line_rolling_left = False
+        self.__line_roll_thread_left.join()
+        self.__line_roll_thread_left = None
+        self.__adapter.left_roll_stop()
+    
+    def line_roll_right_step(self):
+        self.__adapter.right_roll_forward()
+        
+    def line_roll_right_loop(self):
+        while(self.__running and self.__line_rolling_right):
+            self.line_roll_right_step()
+            time.sleep(0.1)
+    
+    def line_roll_right_start(self):
+        self.__line_rolling_right = True
+        self.__line_roll_thread_right = threading.Thread( target = self.line_roll_right_loop )
+        self.__line_roll_thread_right.setDaemon(True)
+        self.__line_roll_thread_right.start()
+    
+    def line_roll_right_stop(self):
+        self.__line_rolling_right = False
+        self.__line_roll_thread_right.join()
+        self.__line_roll_thread_right = None
+        self.__adapter.right_roll_stop()
+    
     def clean_up(self):
         self.__running = False
         self.stop_line()
+        self.__adapter.power_off()
         self.__adapter.state_update_stop()
         
     #====== type-specific functions ======#
@@ -62,8 +122,11 @@ class LineManager(object):
     def stop_line(self):
         self.__adapter.roll_stop()
         
-    def wait_state(self, device, sensor, state):
-        sensor_id = "line_"+device+"_sensor_"+sensor
-        while(self.__running and self.__adapter.data[sensor_id] != state):
+    def get_sensor_state(self, station, sensor):
+        return self.__adapter.data["line_%s_sensor_%s"%(station,sensor)]
+        
+    def wait_sensor_state(self, station, sensor, state=1):
+        while((self.__running) and 
+              (self.get_sensor_state(station, sensor) != state)):
             time.sleep(0.1)
             

@@ -39,12 +39,12 @@
             }
         },
         "sensor": {
-            "detect_front": 12,
-            "detect_middle": 22,
-            "detect_back": 13
+            "detect_front": 8,
+            "detect_middle": 9,
+            "detect_back": 10
         },
         "control": {
-            "stop_line": 14
+            "start_line": 3
         }
     },
     

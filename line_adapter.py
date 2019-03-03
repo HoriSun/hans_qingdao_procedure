@@ -69,9 +69,9 @@ class AddressMacro(object):
     LINE_RIGHT_SENSOR_MIDDLE = 1
     LINE_RIGHT_SENSOR_END = 2
     LINE_RIGHT_SENSOR_AGV = 3
-    LINE_LEFT_SENSOR_FRONT = 4
+    LINE_LEFT_SENSOR_FRONT = 6 #4
     LINE_LEFT_SENSOR_MIDDLE = 5
-    LINE_LEFT_SENSOR_END = 6
+    LINE_LEFT_SENSOR_END = 4 #6
     LINE_LEFT_SENSOR_AGV = 7
     
     LINE_RIGHT_ROLL_FORWARD = 503
@@ -111,6 +111,14 @@ class PlcConnector(object):
 
         self.__socket_lock = threading.Lock()
 
+    def update_param(self, ip, port):
+        self.__plc_ip = ip
+        self.__plc_port = port
+        
+    def reconnect(self):
+        self.close()
+        self.connect()
+    
     def connect(self):
         self.__connect()
         
@@ -166,7 +174,7 @@ class PlcConnector(object):
         # Clear the buffer
         self.__read_buf = b""
 
-
+        
     def close(self):
         try:
             self.__socket.shutdown(socket.SHUT_RDWR)
@@ -174,7 +182,9 @@ class PlcConnector(object):
             Log.error(e, exc_info=1)
         self.__socket.close()
         self.__disconnect_cb()
-
+        
+    def is_connected(self):
+        return self.__connected and (not self.__connecting)
 
     def __set_socket_opt(self):
         self.__socket.settimeout( self.__connect_timeout ) # ??? WARNING ???
@@ -208,7 +218,7 @@ class PlcConnector(object):
 
     def write(self, data):
         try:
-            Log.info("Writing [ %s ]"%repr(data))
+            #Log.info("Writing [ %s ]"%repr(data))
             self.assert_connected()
             
             ldata = len(data)
@@ -265,12 +275,12 @@ class PlcConnector(object):
 
     def read(self):
         try:
-            Log.info("Reading")
+            #Log.info("Reading")
             self.assert_connected()
             
             _recv_data = self.__socket.recv(1024)  
             self.__read_buf += _recv_data
-            Log.info("Receive [ %s ]"%repr(_recv_data))
+            #Log.info("Receive [ %s ]"%repr(_recv_data))
                 
         except Exception as e:
             Log.error(
@@ -334,7 +344,7 @@ class PlcConnector(object):
         """
         with self.__socket_lock:
             data = data.encode() + b'\r'
-            Log.info('send to plc:%s' % data)
+            #Log.info('send to plc:%s' % data)
             recv_data = b""
 
             # TODO 可能陷入死循环
@@ -346,7 +356,7 @@ class PlcConnector(object):
                     #self.write("ER") # clear all the errors
                 else:
                     break
-            Log.info("recv from plc: %s" % recv_data)
+            #Log.info("recv from plc: %s" % recv_data)
             recv_data = recv_data[:-2].decode()
             if len(recv_data) == 2 and recv_data.startswith("E"):
                 self.__handler_error(recv_data[1])
@@ -399,17 +409,31 @@ class Plc(object):
     def __init__(self, ip, port=8501,
                  connect_cb = lambda:None,
                  disconnect_cb = lambda:None):
+        self.__ip = ip
+        self.__port = port
         self.__connect_cb = self.on_connect_gen(connect_cb)
         self.__disconnect_cb = self.on_disconnect_gen(disconnect_cb)
-        self.__plc_connector = PlcConnector(ip, 
-                                            port,
-                                            connect_cb = self.__connect_cb,
-                                            disconnect_cb = self.__disconnect_cb
+        self.__plc_connector = PlcConnector( self.__ip, 
+                                             self.__port,
+                                             connect_cb = self.__connect_cb,
+                                             disconnect_cb = self.__disconnect_cb
                                            )
 
+    def update_param(self, ip, port):
+        self.__ip = ip
+        self.__port = port
+        self.__plc_connector.update_param(self.__ip,
+                                          self.__port)
+
+    def is_connected(self):
+        return self.__plc_connector.is_connected()
+                                          
     def connect(self):
         self.__plc_connector.connect()
-                                           
+    
+    def reconnect(self):
+        self.__plc_connector.reconnect()
+    
     def register_connection_cb(self,
                                connect_cb = lambda:None,
                                disconnect_cb = lambda:None):
@@ -651,6 +675,8 @@ class Plc(object):
 class LineAdapter(object):
     """用于注册所有到其他节点的映射"""
 
+    __port_default__ = 8501
+    
     class ROLL_STATE(object):
         STOP = 0
         FORWARD = 1
@@ -661,7 +687,9 @@ class LineAdapter(object):
         ON = 1
 
     def __init__(self, ip, port=8501):
-        self.__plc = Plc(ip=ip, port=port)        
+        self.__ip = ip
+        self.__port = port
+        self.__plc = Plc(ip=self.__ip, port=self.__port)        
         self.__plc.register_connection_cb(connect_cb = self.on_connect,
                                           disconnect_cb = self.on_disconnect)
 
@@ -681,20 +709,40 @@ class LineAdapter(object):
         self.__state_update_thread = None
                                           
         self.soft_components_bit = [
-            SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_FRONT, None ),
-            SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_MIDDLE, None ),
-            SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_END, None ),
-            SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_AGV, None ),
-            SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_SENSOR_FRONT, None ),
-            SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_SENSOR_MIDDLE, None ),
-            SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_SENSOR_END, None ),
-            SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_SENSOR_AGV, None ),
+            SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_SENSOR_FRONT, None ),
+            SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_SENSOR_MIDDLE, None ),
+            SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_SENSOR_END, None ),
+            SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_SENSOR_AGV, None ),
+            SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_LEFT_SENSOR_FRONT, None ),
+            SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_LEFT_SENSOR_MIDDLE, None ),
+            SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_LEFT_SENSOR_END, None ),
+            SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_LEFT_SENSOR_AGV, None ),
+
+            #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_FRONT, None ),
+            #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_MIDDLE, None ),
+            #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_END, None ),
+            #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_AGV, None ),
+            #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_SENSOR_FRONT, None ),
+            #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_SENSOR_MIDDLE, None ),
+            #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_SENSOR_END, None ),
+            #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_SENSOR_AGV, None ),
+
         ]
 
+                    
+    def update_param(self, ip, port):
+        self.__ip = ip
+        self.__port = port
+        self.__plc.update_param(self.__ip, self.__port)
+        
+    def is_connected(self):
+        return self.__plc.is_connected()
         
     def connect(self):
         self.__plc.connect()
         
+    def reconnect(self):
+        self.__plc.reconnect()
         
     def state_update_start(self):
         if(self.__updating_state):
@@ -737,16 +785,15 @@ class LineAdapter(object):
         Log.info("PLC connection established, registering data monitor.")
         self.__plc.login_monitor_bit(self.soft_components_bit)
         
-        
     def on_disconnect(self):
         Log.info("PLC disconnected.")
         
         
     def left_power_on(self):
-        self.__plc.set_bit(SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_POWER_ON)
+        self.__plc.set_bit(SoftComponentsMacro.R, AddressMacro.LINE_LEFT_POWER_ON)
     
     def left_power_off(self):
-        self.__plc.set_bit(SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_POWER_OFF)
+        self.__plc.reset_bit(SoftComponentsMacro.R, AddressMacro.LINE_LEFT_POWER_ON)
     
     def left_power(self, on):
         if(on):
@@ -755,10 +802,10 @@ class LineAdapter(object):
             self.left_power_off()
     
     def right_power_on(self):
-        self.__plc.set_bit(SoftComponentsMacro.MR, AddressMacro.LINE_right_POWER_ON)
+        self.__plc.set_bit(SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_POWER_ON)
     
     def right_power_off(self):
-        self.__plc.set_bit(SoftComponentsMacro.MR, AddressMacro.LINE_right_POWER_OFF)
+        self.__plc.reset_bit(SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_POWER_ON)
     
     def right_power(self, on):
         if(on):
@@ -775,28 +822,28 @@ class LineAdapter(object):
         self.right_power_on()
     
     def left_roll_forward_on(self):
-        self.__plc.set_bit(SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_ROLL_FORWARD)
+        self.__plc.set_bit(SoftComponentsMacro.R, AddressMacro.LINE_LEFT_ROLL_FORWARD)
     
     def left_roll_forward_off(self):
-        self.__plc.reset_bit(SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_ROLL_FORWARD)
+        self.__plc.reset_bit(SoftComponentsMacro.R, AddressMacro.LINE_LEFT_ROLL_FORWARD)
         
     def left_roll_backward_on(self):
-        self.__plc.set_bit(SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_ROLL_BACKWARD)
+        self.__plc.set_bit(SoftComponentsMacro.R, AddressMacro.LINE_LEFT_ROLL_BACKWARD)
     
     def left_roll_backward_off(self):
-        self.__plc.reset_bit(SoftComponentsMacro.MR, AddressMacro.LINE_LEFT_ROLL_BACKWARD)
+        self.__plc.reset_bit(SoftComponentsMacro.R, AddressMacro.LINE_LEFT_ROLL_BACKWARD)
 
     def right_roll_forward_on(self):
-        self.__plc.set_bit(SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_ROLL_FORWARD)
+        self.__plc.set_bit(SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_ROLL_FORWARD)
     
     def right_roll_forward_off(self):
-        self.__plc.reset_bit(SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_ROLL_FORWARD)
+        self.__plc.reset_bit(SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_ROLL_FORWARD)
                 
     def right_roll_backward_on(self):
-        self.__plc.set_bit(SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_ROLL_BACKWARD)
+        self.__plc.set_bit(SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_ROLL_BACKWARD)
     
     def right_roll_backward_off(self):
-        self.__plc.reset_bit(SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_ROLL_BACKWARD)
+        self.__plc.reset_bit(SoftComponentsMacro.R, AddressMacro.LINE_RIGHT_ROLL_BACKWARD)
         
     def left_roll_forward(self):
         self.left_roll_backward_off()
@@ -827,7 +874,7 @@ class LineAdapter(object):
             self.left_roll_stop()
         elif(state == ControlMapper.ROLL_STATE.FORWARD):
             self.left_roll_forward()
-        elif(state == ControlMapper.ROLL_STATE.FORWARD):
+        elif(state == ControlMapper.ROLL_STATE.BACKWARD):
             self.left_roll_backward()
         else:
             Log.error("left roll state invalid: %s"%(state))
@@ -837,7 +884,7 @@ class LineAdapter(object):
             self.right_roll_stop()
         elif(state == ControlMapper.ROLL_STATE.FORWARD):
             self.right_roll_forward()
-        elif(state == ControlMapper.ROLL_STATE.FORWARD):
+        elif(state == ControlMapper.ROLL_STATE.BACKWARD):
             self.right_roll_backward()
         else:
             Log.error("right roll state invalid: %s"%(state))

@@ -71,12 +71,18 @@ class AgvAdapter(object):
         
         self.__running = True
         
+        self.__required_inputs = {}
+        self.__required_input_indexes = []
+        self.__required_input_callback = None
+        
         self.__agv_state = None
         self.__monitoring = False
         self.__monitoring_internal = 0
         self.__monitoring_external = 0
         self.__monitor_data_recv = False
+        self.__monitor_input_recv = False
         self.state_monitor_thread = None
+
         return 
 
     def shutdown(self):
@@ -215,7 +221,6 @@ class AgvAdapter(object):
     def cancel_all_tasks(self):
         return self.call( self.port_info["task"]["client"], cancel_task )
 
-    
     def go_fixed_block(self,node):
         self.go_fixed_unblock(node)
         self.wait_fixed(node)
@@ -228,14 +233,18 @@ class AgvAdapter(object):
         
 
     # [ TODO ] Should stop and report error when the task failed
-    def wait_task(self, target_func):
+    def wait_task(self, target_func, interruptor=None):
     
         self.__start_monitor_state_internal()
     
-        while(not self.__monitor_data_recv):
+        interrupted = lambda:interruptor.check() if interruptor else False
+    
+        while((not self.__monitor_data_recv) and 
+              (not interrupted())):
             time.sleep(0.1)
     
-        while(self.__running):
+        while((self.__running) and 
+              (not interrupted())):
             state__ = self.__agv_state["taskState"]
             if(state__ == 'FINISHED'):
                 if(target_func()):
@@ -256,7 +265,7 @@ class AgvAdapter(object):
         self.__stop_monitor_state_internal()
     
     
-    def wait_fixed(self, node=""):
+    def wait_fixed(self, node="", interruptor=None):
         def target_f():
             ret = True
             ret &= (self.__agv_state["controlMode"] == "FIXED_TRACK")
@@ -264,7 +273,7 @@ class AgvAdapter(object):
             if(node):
                 ret &= (self.__agv_state["virtualNode"] == str(node)) # adapt to possible type (int)
             return ret
-        self.wait_task(target_f)
+        self.wait_task(target_f, interruptor)
     
     def go_mag_block(self,rfid,turn="RIGHT",direction="FRONT"):
         self.go_mag_unblock(rfid, turn, direction)
@@ -294,7 +303,7 @@ class AgvAdapter(object):
         return self.call( self.port_info["task"]["client"], add_mag_task(rfid, turn, direction) )
 
     
-    def wait_mag(self, node=-1):
+    def wait_mag(self, node=-1, interruptor=None):
         def target_f():
             ret = True
             ret &= (self.__agv_state["controlMode"] == "MAG")
@@ -302,7 +311,7 @@ class AgvAdapter(object):
             if(node!=-1):
                 ret &= (self.__agv_state["magNode"] == int(node))
             return ret
-        self.wait_task(target_f)
+        self.wait_task(target_f, interruptor)
     
     
     def get_state(self, key=""):
@@ -357,6 +366,7 @@ class AgvAdapter(object):
       
         def monitor_state_loop():
             self.__monitor_data_recv = False
+            self.__monitor_input_recv = False
             while(self.__running and self.__monitoring):
                 agv_state = self.get_state()
                 if(agv_state):
@@ -365,10 +375,21 @@ class AgvAdapter(object):
                     #self.Log.info("[monitor_state_loop] onMagTrack = %s"%(agv_state["onMagTrack"]))
                 else:
                     self.Log.error("Cannot get AGV state.")
-                time.sleep(0.1)
+                
+                time.sleep(0.05)
+                
+                if(self.__required_input_indexes):
+                    inputs = self.get_input_one_by_one(self.__required_input_indexes)
+                    if(inputs):
+                        self.__required_inputs = inputs
+                        self.__monitor_input_recv = True
+                        self.__required_input_callback( self.__required_inputs )
+                    else:
+                        self.Log.error("Cannot get AGV DI # %s"%(self.__required_input_indexes))
         
         self.__monitoring = True
         self.__monitor_data_recv = False
+        self.__monitor_input_recv = False
         self.state_monitor_thread = self.daemon_thread( target = monitor_state_loop ,
                                                         name = "monitor_state_loop" )
         
@@ -556,7 +577,9 @@ class AgvAdapter(object):
             while(self.__running):
                 try:
                     __res = self.get_one_input(index)
+                    #print __res
                     data = json.loads(__res)["data"]
+                    #print data
                     state = data["state"]
                     break
                 except Exception as e:
@@ -566,9 +589,13 @@ class AgvAdapter(object):
             ret[index] = state
         return ret
     
-    def get_input_callback(self, indexes, f, sleep_time):
-        while(self.__running):
-            f(self.get_input_one_by_one(indexes))
-            time.sleep(sleep_time)
-            
+    def get_input_callback_start(self, indexes, f):
+        self.__required_input_callback = f
+        self.__required_input_indexes = indexes
+        
+    def get_input_callback_stop(self):
+        self.__required_input_indexes = []
+        self.__required_input_callback = lambda:None # may be called for one more time
+        self.__required_inputs = {}
+        self.__required_input_callback = None
         
