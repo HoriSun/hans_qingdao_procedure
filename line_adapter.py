@@ -19,6 +19,8 @@ Log = log_wrap(prefix = "[ Line Adapter ]")
     
 # [ TODO ] Make a general Keyance adapter
     
+class LineAdapterHelper(object):
+    DEBUG = False
     
 try:
     import win32api
@@ -218,7 +220,8 @@ class PlcConnector(object):
 
     def write(self, data):
         try:
-            #Log.info("Writing [ %s ]"%repr(data))
+            if(LineAdapterHelper.DEBUG):
+                Log.info("Writing [ %s ]"%repr(data))
             self.assert_connected()
             
             ldata = len(data)
@@ -275,12 +278,14 @@ class PlcConnector(object):
 
     def read(self):
         try:
-            #Log.info("Reading")
+            if(LineAdapterHelper.DEBUG):
+                Log.info("Reading")
             self.assert_connected()
             
             _recv_data = self.__socket.recv(1024)  
             self.__read_buf += _recv_data
-            #Log.info("Receive [ %s ]"%repr(_recv_data))
+            if(LineAdapterHelper.DEBUG):
+                Log.info("Receive [ %s ]"%repr(_recv_data))
                 
         except Exception as e:
             Log.error(
@@ -344,7 +349,8 @@ class PlcConnector(object):
         """
         with self.__socket_lock:
             data = data.encode() + b'\r'
-            #Log.info('send to plc:%s' % data)
+            if(LineAdapterHelper.DEBUG):
+                Log.info('send to plc:%s' % data)
             recv_data = b""
 
             # TODO 可能陷入死循环
@@ -356,7 +362,8 @@ class PlcConnector(object):
                     #self.write("ER") # clear all the errors
                 else:
                     break
-            #Log.info("recv from plc: %s" % recv_data)
+            if(LineAdapterHelper.DEBUG):
+                Log.info("recv from plc: %s" % recv_data)
             recv_data = recv_data[:-2].decode()
             if len(recv_data) == 2 and recv_data.startswith("E"):
                 self.__handler_error(recv_data[1])
@@ -718,6 +725,13 @@ class LineAdapter(object):
             SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_LEFT_SENSOR_END, None ),
             SoftComponent( SoftComponentsMacro.R, AddressMacro.LINE_LEFT_SENSOR_AGV, None ),
 
+            SoftComponent( SoftComponentsMacro.R, 503, None ),
+            SoftComponent( SoftComponentsMacro.R, 504, None ),
+            SoftComponent( SoftComponentsMacro.R, 505, None ),
+            SoftComponent( SoftComponentsMacro.R, 506, None ),
+            SoftComponent( SoftComponentsMacro.R, 507, None ),
+            SoftComponent( SoftComponentsMacro.R, 508, None ),
+
             #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_FRONT, None ),
             #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_MIDDLE, None ),
             #SoftComponent( SoftComponentsMacro.MR, AddressMacro.LINE_RIGHT_SENSOR_END, None ),
@@ -773,7 +787,15 @@ class LineAdapter(object):
             self.data["line_left_sensor_end"] ,
             self.data["line_left_sensor_agv"] ,
             
-        ) = self.__plc.read_monitor_bit()
+            s503,
+            s504,
+            s505,
+            s506,
+            s507,
+            s508,
+            
+        ) = data = self.__plc.read_monitor_bit()
+        #Log.info("%s  %s"%(data[:8],data[8:]))
 
     def state_update_loop(self):
         self.__updating_state = True

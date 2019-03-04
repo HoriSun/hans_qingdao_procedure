@@ -244,6 +244,7 @@ class QingDaoProcedure(object):
         
         
         line.stop_line()
+        #line.test()
         #agv.stop_line()
         
         #agv.go_right()

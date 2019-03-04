@@ -93,9 +93,13 @@ class LineManager(object):
     
     def line_roll_right_step(self):
         self.__adapter.right_roll_forward()
+        #self.__adapter.left_roll_backward()
         
     def line_roll_right_loop(self):
+        self.Log.info("self.__running = %s"%(self.__running))
+        self.Log.info("self.__line_rolling_right = %s"%(self.__line_rolling_right))
         while(self.__running and self.__line_rolling_right):
+            self.Log.info("fuck")
             self.line_roll_right_step()
             time.sleep(0.1)
     
@@ -128,5 +132,18 @@ class LineManager(object):
     def wait_sensor_state(self, station, sensor, state=1):
         while((self.__running) and 
               (self.get_sensor_state(station, sensor) != state)):
+            #self.Log.info("="*20)
+            #for st in ["left", "right"]:
+            #    for sr in ["front","middle","end"]:
+            #        self.Log.info("%s-%s : %s"%(st,sr,self.get_sensor_state(station, sensor)))
+            #self.Log.info("%s-%s : %s"%(st,sr,self.get_sensor_state(station, sensor)))
             time.sleep(0.1)
-            
+    
+    def test(self):
+        return
+        self.Log.info("===========================!!!!!")
+        self.__line_rolling_right = True
+        self.line_roll_right_loop()
+        self.__line_rolling_right = False
+        
+        pass

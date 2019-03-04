@@ -230,7 +230,7 @@ class QingDaoProcedure(object):
             line.line_roll_left_start()
             line.wait_sensor_state("left","middle",1)
             if(line.get_sensor_state("left","agv")!=1):
-                #agv.go_left()
+                #agv.go_station("left")
                 self.Log.info("AGV is not at the left station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
                 line.wait_sensor_state("left","agv",1)
             agv.start_line()
@@ -243,10 +243,10 @@ class QingDaoProcedure(object):
             
             agv.leave_left()
             
-            agv.go_right()
+            agv.go_station("right")
             
             if(line.get_sensor_state("right","agv")!=1):
-                #agv.go_left()
+                #agv.go_station("left")
                 self.Log.info("AGV is not at the right station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
                 line.wait_sensor_state("right","agv",1)
             
@@ -261,7 +261,7 @@ class QingDaoProcedure(object):
             line.line_roll_right_stop()
             
             agv.leave_right()
-            agv.go_left()
+            agv.go_station("left")
             pass
             
         
@@ -286,6 +286,10 @@ class QingDaoProcedure(object):
         line.stop_line()
         agv.stop_line()
         
+        #line.line_roll_left_start()
+        #line.line_roll_right_start()
+            
+        
         time.sleep(0.3)
         
         
@@ -297,9 +301,9 @@ class QingDaoProcedure(object):
             agv.leave_right()
         
         
-        agv.go_left()
+        agv.go_station("left")
         
-        #star.go_right()
+        #star.go_station("right")
             
         #star.check_goods()
         

@@ -137,7 +137,7 @@ class AgvManager(object):
         # [ TODO ] Check the spelling error in "face" ("front", "back"). This may lead to bugs
         return (face["ready"] != face["line"])
         
-    def face_adapt(self, station, interruptor):
+    def face_adapt(self, station):
         face = self.__param["station"][station]["face"]
         face_ready = face["ready"]
         face_line = face["line"]
@@ -145,7 +145,7 @@ class AgvManager(object):
             self.__adapter.rotate(-0.4, -math.pi)
         self.__adapter.rotate_find_tape()
         if(face_line == "back"):
-            self.go_mag_wait(station, interruptor, force_direction="FRONT")
+            self.go_mag_wait(station, force_direction="FRONT")
             self.__adapter.rotate(-0.4, -math.pi)
             self.__adapter.rotate_find_tape()
         pass
@@ -178,14 +178,33 @@ class AgvManager(object):
             self.__go_station(interruptor)
         else:
             self.Log.error("go_unblock(): Undefined station name: %s"%(station))
+    
+
+    def go_station(self, station):
+        self.Log.info("__go_station(\"%s\")"%(station))
+        fixed_node = self.__param["station"][station]["virtual"]["ready"]
         
+        
+        self.__adapter.go_fixed_unblock( fixed_node )
+        
+        self.__adapter.wait_fixed( fixed_node )
+        self.face_adapt(station)
+        #if(self.face_different("left")):
+        #    self.Log.info("left face different, rotating 180 degrees")
+        #    self.__adapter.rotate(-0.4, -math.pi)
+        self.go_mag_wait(station)
+        #self.__adapter.rotate(-0.4, -math.pi)
+        #self.__adapter.go_straight(-0.1, -0.1)
+        #self.__adapter.go_fixed_unblock(self.__param["station"]["right"]["virtual"]["line"])
+    
+    
     def get_position(self):
         pass
         
     
         
     def go_unblock_reached(self, station):
-        
+        pass
         
     def go_unblock_start(self, station):
         self.__going_unblock = True
@@ -200,7 +219,7 @@ class AgvManager(object):
         self.__go_unblock_thread.join()
         self.__go_unblock_thread = None
         
-    def go_mag_wait(self, station, interruptor, force_turn="", force_direction=""):
+    def go_mag_wait(self, station, force_turn="", force_direction=""):
         self.Log.info("go_mag_wait(%s)"%(repr(station)))
         station_info = self.__param["station"][station]
         
@@ -218,11 +237,7 @@ class AgvManager(object):
         
         self.__adapter.go_mag_unblock( mag_node, turn, direction )
 
-        if(interruptor.check()):
-            self.__adapter.cancel_all_tasks()
-            return
-
-            self.__adapter.wait_mag( mag_node, interruptor )
+        self.__adapter.wait_mag( mag_node )
         
     def leave_action(self, station):
         station_info = self.__param["station"][station]
