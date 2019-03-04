@@ -83,6 +83,9 @@ class AgvAdapter(object):
         self.__monitor_input_recv = False
         self.state_monitor_thread = None
 
+        
+        self.__state_callback_external = None
+        
         return 
 
     def shutdown(self):
@@ -110,12 +113,14 @@ class AgvAdapter(object):
     
     
     def call(self, client, cmd):
-        if(self.__serialize):
-            cmd = cmd.replace(" ","").replace("\n","").replace("\r","").replace("\t","")
-        self._print(cmd, prefix="[ ->]: ")
-        res = client.call(cmd)
-        self._print(res, prefix="[<- ]: ")
-        return res
+        while(True):
+            if(self.__serialize):
+                cmd = cmd.replace(" ","").replace("\n","").replace("\r","").replace("\t","")
+            self._print(cmd, prefix="[ ->]: ")
+            res = client.call(cmd)[0]
+            if(len(res[0])==res[1]):
+                self._print(res[0], prefix="[<- ]: ")
+                return res[0]
     
     
     def setSerialize(self, state=True):
@@ -330,12 +335,14 @@ class AgvAdapter(object):
             return None
             
     
-    def start_monitor_state(self):
+    def start_monitor_state(self, callback):
         self.__monitoring_external += 1
+        self.__state_callback_external = callback
         self.__start_monitor_state_impl()
     
     def stop_monitor_state(self):
         self.__monitoring_external -= 1
+        self.__state_callback_external = None
         self.__stop_monitor_state_impl()
     
     def __start_monitor_state_internal(self):
@@ -372,6 +379,8 @@ class AgvAdapter(object):
                 if(agv_state):
                     self.__agv_state = agv_state
                     self.__monitor_data_recv = True
+                    if(self.__state_callback_external):
+                        self.__state_callback_external(self.__agv_state)
                     #self.Log.info("[monitor_state_loop] onMagTrack = %s"%(agv_state["onMagTrack"]))
                 else:
                     self.Log.error("Cannot get AGV state.")
@@ -578,7 +587,7 @@ class AgvAdapter(object):
                 try:
                     __res = self.get_one_input(index)
                     #print __res
-                    data = json.loads(__res)["data"]
+                    data = loads_json(__res)["data"]
                     #print data
                     state = data["state"]
                     break
@@ -598,4 +607,30 @@ class AgvAdapter(object):
         self.__required_input_callback = lambda:None # may be called for one more time
         self.__required_inputs = {}
         self.__required_input_callback = None
+    
+    def get_map(self):
+        while(True):
+            try:
+                __res = self.port_info["state"]["client"].call(get_map)
+                data = loads_json(loads_json(__res)["data"]["data"])
+                break
+            except ValueError as e:
+                self.Log.error("get map error")
+                #self.Log.error("get map error, Retry.")
+                time.sleep(0.1)
+            except Exception as e:
+                #self.Log.error("get map error: %s"%(e.args[0]))
+                self.Log.error("get map error, Retry.")
+                time.sleep(0.1)
+            
+        #print __res
+        return data
+
+    def get_position(self):
+        #### [ TODO ] Check if AGV state data is initialized (assigned for the first time)
+        return ( self.__agv_state["x"],
+                 self.__agv_state["y"],
+                 self.__agv_state["angle"] )
         
+        return x,y,theta
+    

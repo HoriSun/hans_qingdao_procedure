@@ -22,6 +22,14 @@ class TcpClient(object):
         :return:
         """
         request_length = len(request)
+        
+        recv_tmp = ""
+        while(False):
+            recv_tmp = self.__socket.recv(1)
+            if(recv_tmp):
+                print "%02X"%(ord(recv_tmp))
+                continue
+            break
         #print "!I%ss" % request_length, request, type(request)
         request_bytes = struct.pack("!I%ss" % request_length, request_length, request)
         self.__socket.send(request_bytes)
@@ -30,11 +38,14 @@ class TcpClient(object):
         #print("length:%s" % response_length)
         acc_len = 0
         response = ""
+        
         while(acc_len < response_length):
             response += self.__socket.recv(response_length)
             acc_len = len(response)
             #print("length:%s" % len(response))
             if "" == response:
+                #print "Empty response!"
                 self.close()
                 raise RuntimeError("连接中断!sock:" + str(self.__socket.getpeername()))
-            return response
+            #print response_length, len(response), response[:10], response[-10:]
+            return response, response_length

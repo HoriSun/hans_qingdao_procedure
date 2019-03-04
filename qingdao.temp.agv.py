@@ -38,7 +38,7 @@ class QingDaoProcedure(object):
         
         self.__managers = [ self.__agv_manager ,
                             #self.__star_manager ,
-                            self.__line_manager 
+                            #self.__line_manager 
                           ]
         
         pass
@@ -177,8 +177,8 @@ class QingDaoProcedure(object):
             self.__agv_manager.update_param(config_data["agv"])
         #if("star" in config_data):
         #    self.__star_manager.update_param(config_data["star"])
-        if("line" in config_data):
-            self.__line_manager.update_param(config_data["line"])
+        #if("line" in config_data):
+        #    self.__line_manager.update_param(config_data["line"])
         
     def __connect_all(self):
         # [ TODO ] Better make this asyncronized
@@ -226,6 +226,9 @@ class QingDaoProcedure(object):
         self.Log.info("entering loop")
         
         while True:
+            agv.is_at_station(str(self.__param["agv"]["station"]["right"]["virtual"]["line"]))
+            time.sleep(0.3)
+            continue
             
             line.wait_sensor_state("left","end",1)
             line.line_roll_left_start()
@@ -283,22 +286,21 @@ class QingDaoProcedure(object):
         
         self.Log.info("Start initialize device states")
         
-        
-        line.stop_line()
+        #line.stop_line()
         agv.stop_line()
         
         time.sleep(0.3)
         
         
         ###### [ TODO ] This is not safe. Use a safer method.
-        if(line.get_sensor_state("left","agv")):
-            agv.leave_left()
+        #if(line.get_sensor_state("left","agv")):
+        #    agv.leave_left()
         
-        if(line.get_sensor_state("right","agv")):
-            agv.leave_right()
+        #if(line.get_sensor_state("right","agv")):
+        #    agv.leave_right()
         
         
-        agv.go_left()
+        #agv.go_left()
         
         #star.go_right()
             

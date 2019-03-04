@@ -1,4 +1,4 @@
-from utils import log_wrap, check_ip_correct
+from utils import log_wrap, check_ip_correct, angle_diff, abs
 from json_proc import dumps_json
 from agv_adapter import AgvAdapter
 import math
@@ -39,11 +39,17 @@ class AgvManager(object):
             "detect_back": 0
         }
         
+        self.__position = {
+            "x": 0,
+            "y": 0,
+            "theta": 0
+        }
+        
         self.__going_unblock = False
         self.__go_unblock_thread = None
         
         self.__running = True
-        
+        self.__map_nodes = {}
         pass
         
     def __set_default_param(self):
@@ -114,11 +120,12 @@ class AgvManager(object):
         pass
         
     def init(self):
+        self.get_map_nodes()
         self.__adapter.get_input_callback_start(self.__param["sensor"].values(), 
                                                 self.io_callback)
         self.__adapter.trigger_button_reset()
         self.__adapter.trigger_button_run()
-        self.__adapter.start_monitor_state()
+        self.__adapter.start_monitor_state(callback = self.agv_state_callback)
         # [ TODO ] Make sure localization is correct
         
     def clean_up(self):
@@ -178,14 +185,31 @@ class AgvManager(object):
             self.__go_station(interruptor)
         else:
             self.Log.error("go_unblock(): Undefined station name: %s"%(station))
+            
+    def is_at_station(self, station):
+        pose_map = lambda x:(x["x"],x["y"],x["theta"])
+        diff = lambda x,y:(x[i]-y[i] for i in xrange(len(x)))
+        norm = lambda a:math.sqrt(reduce(lambda x,y:x+y,map(lambda z:z*z,a)))
+        distance_threshold = 0.05
         
-    def get_position(self):
-        pass
+        station_pose = pose_map(self.__map_nodes[station])
+        agv_pose = pose_map(self.__position)
         
-    
+        
+        
+        
+        self.Log.info("[is_at_station] station %s pose:  ( % 7.5lf, % 7.5lf, % 7.5lf, )"
+                      ""%((station,)+station_pose))
+        self.Log.info("[is_at_station] agv pose:  ( % 7.5lf, % 7.5lf, % 7.5lf, )"
+                      ""%agv_pose)
+        
+        d_position = norm(diff(station_pose[:2], agv_pose[:2]))
+        d_angle = abs(angle_diff(station_pose[2], agv_pose[2]))
+        
+        return d_position <= distance_threshold, d_position, d_angle 
         
     def go_unblock_reached(self, station):
-        
+        pass
         
     def go_unblock_start(self, station):
         self.__going_unblock = True
@@ -257,5 +281,33 @@ class AgvManager(object):
             #print "detect_%s"%(sensor)
             #print state
             time.sleep(0.1)
-            
-            
+    
+    def get_map_nodes(self):
+        m = self.__adapter.get_map()
+        
+        #self.Log.info( m.keys() )
+        nodes = m["nodes"]
+        
+        for n in nodes:
+            name = n["name"]
+            x = n["pos"]["x"]
+            y = n["pos"]["y"]
+            theta = n["pos"]["theta"]
+            self.__map_nodes[name] = {"x":x, "y":y, "theta":theta}
+            self.Log.info("map node [ % 2s ]  x( % 7.5lf )  y( % 7.5lf )  "
+                          "theta( % 7.5lf )"%(name,x,y,theta))
+        
+    def get_position(self, agv_state):
+        #( self.__position["x"] ,
+        #  self.__position["y"] ,
+        #  self.__position["theta"] ) = self.__adapter(get_position())
+        self.Log.info("get_position()")
+        self.__position["x"] = agv_state["x"]
+        self.__position["y"] = agv_state["y"] 
+        self.__position["theta"] = agv_state["angle"]
+         
+          
+    def agv_state_callback(self, msg):
+        self.Log.info("agv_state_callback()")
+        self.__agv_state = msg
+        self.get_position(self.__agv_state)
