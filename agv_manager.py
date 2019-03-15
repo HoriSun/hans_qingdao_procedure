@@ -136,8 +136,17 @@ class AgvManager(object):
         face = self.__param["station"][station]["face"]
         # [ TODO ] Check the spelling error in "face" ("front", "back"). This may lead to bugs
         return (face["ready"] != face["line"])
+
+    def rotate_find_tape( self, 
+                          angle_range = 10/180.0*math.pi, 
+                          angular_speed = 0.1,
+                          angle_tolerance = 0.01,
+                          check_duration = 0.1 ):
+        self.__adapter.rotate_find_tape(angle_range, angular_speed, 
+                                        angle_tolerance, check_duration )
         
     def face_adapt(self, station):
+        self.Log.info("face_adapt()")
         face = self.__param["station"][station]["face"]
         face_ready = face["ready"]
         face_line = face["line"]

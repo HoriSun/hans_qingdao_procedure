@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 
 import os
 import sys
@@ -225,6 +228,8 @@ class QingDaoProcedure(object):
             #agv.go_left()
             #agv.leave_left()
             #agv.go_right()
+            #line.line_roll_right_start()
+            #line.line_roll_left_start()
             pass
         
         pass

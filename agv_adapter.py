@@ -501,7 +501,7 @@ class AgvAdapter(object):
                           angular_speed = 0.1,
                           angle_tolerance = 0.01,
                           check_duration = 0.1 ):
-                                
+        self.Log.info("rotate_find_tape()")
         angle_ori = 0.0
                         
         self.__start_monitor_state_internal()
@@ -517,19 +517,23 @@ class AgvAdapter(object):
             #self.Log.info("[rotate_find_tape] onMagTrack = %s"%(self.__agv_state["onMagTrack"]))
             self.switch_manual()
 
-            for dend, dspeed in [[ -1*angle_range, -1 ],
-                                 [  2*angle_range,  1 ],
-                                 [ -1*angle_range, -1 ]]:
+            for dend, dspeed in [[  1*angle_range,  1 ],
+                                 [ -2*angle_range, -1 ],
+                                 [  1*angle_range,  1 ]]:
                 self.speed_control( 0, angular_speed * dspeed )
                 
                 dangle = angle_diff( self.__agv_state["angle"], angle_ori )
                 while( angle_diff(dangle, dend) > angle_tolerance ):
+                    self.Log.info("dangle=[%lf]  dend=[%lf]  diff[%lf]"%(dangle,dend,angle_diff(dangle, dend)))
+                    
                     if (self.__agv_state["onMagTrack"]):
                         self.speed_control( 0, 0 )
                         track_found = True
                         break
                         pass # if
                     time.sleep(check_duration)
+                    dangle = angle_diff( self.__agv_state["angle"], angle_ori )
+
                     pass # while
                 if(track_found):
                     break

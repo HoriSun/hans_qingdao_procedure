@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import os
 import sys
@@ -226,45 +228,50 @@ class QingDaoProcedure(object):
         
         while True:
             
-            line.wait_sensor_state("left","end",1)
-            line.line_roll_left_start()
-            line.wait_sensor_state("left","middle",1)
-            if(line.get_sensor_state("left","agv")!=1):
-                #agv.go_station("left")
-                self.Log.info("AGV is not at the left station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
-                line.wait_sensor_state("left","agv",1)
-            agv.start_line()
-            line.wait_sensor_state("left","front",1)
-            agv.wait_sensor_state("front",1)
-            agv.wait_sensor_state("middle",1)
-            
-            agv.stop_line()
-            line.line_roll_left_stop()
-            
-            agv.leave_left()
-            
-            agv.go_station("right")
-            
-            if(line.get_sensor_state("right","agv")!=1):
-                #agv.go_station("left")
-                self.Log.info("AGV is not at the right station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
-                line.wait_sensor_state("right","agv",1)
-            
-            line.line_roll_right_start()
-            agv.start_line()
-            agv.wait_sensor_state("middle",1)
-            agv.wait_sensor_state("back",1)
-            line.wait_sensor_state("right","front",1)
-            line.wait_sensor_state("right","middle",1)
-            agv.stop_line()
-            line.wait_sensor_state("right","end",1)
-            line.line_roll_right_stop()
-            
-            agv.leave_right()
-            agv.go_station("left")
-            pass
-            
-        
+            if False:
+                line.wait_sensor_state("left","end",1)
+                line.line_roll_left_start()
+                line.wait_sensor_state("left","middle",1)
+                if(line.get_sensor_state("left","agv")!=1):
+                    #agv.go_station("left")
+                    self.Log.info("AGV is not at the left station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
+                    line.wait_sensor_state("left","agv",1)
+                agv.start_line()
+                line.wait_sensor_state("left","front",1)
+                agv.wait_sensor_state("front",1)
+                agv.wait_sensor_state("middle",1)
+                
+                agv.stop_line()
+                line.line_roll_left_stop()
+                
+                agv.leave_left()
+                
+                agv.go_station("right")
+                
+                if(line.get_sensor_state("right","agv")!=1):
+                    #agv.go_station("left")
+                    self.Log.info("AGV is not at the right station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
+                    line.wait_sensor_state("right","agv",1)
+                
+                line.line_roll_right_start()
+                agv.start_line()
+                agv.wait_sensor_state("middle",1)
+                agv.wait_sensor_state("back",1)
+                line.wait_sensor_state("right","front",1)
+                line.wait_sensor_state("right","middle",1)
+                agv.stop_line()
+                line.wait_sensor_state("right","end",1)
+                line.line_roll_right_stop()
+                
+                agv.leave_right()
+                agv.go_station("left")
+                pass
+            else:
+                agv.leave_left()
+                agv.go_station("right")
+                agv.leave_right()
+                agv.go_station("left")
+                
         pass
         
     def __init_all(self):
