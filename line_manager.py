@@ -99,7 +99,6 @@ class LineManager(object):
         self.Log.info("self.__running = %s"%(self.__running))
         self.Log.info("self.__line_rolling_right = %s"%(self.__line_rolling_right))
         while(self.__running and self.__line_rolling_right):
-            self.Log.info("fuck")
             self.line_roll_right_step()
             time.sleep(0.1)
     

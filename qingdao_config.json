@@ -54,6 +54,14 @@
             "port": {
                 "modbus": 502
             }
+        },
+        "station": {
+            "ready": 1,
+            "place": 2,
+            "pick": 3
+        },
+        "options": {
+            "log_message": false
         }
     },
     
