@@ -218,6 +218,11 @@ class QingDaoProcedure(object):
         
     def __schedule_loop(self):
         self.__init_all()
+
+        block_id_list = [1,2]
+        block_id_index = 0
+        n_block_id = len(block_id_list)
+        block_id = block_id_list[block_id_index]
         
         # alias
         line = self.__line_manager
@@ -234,7 +239,7 @@ class QingDaoProcedure(object):
                 star.agv_go_place()                
                 star.wait_agv_task_finish()
                 
-                star.elfin_place(2)
+                star.elfin_place( block_id )
                 star.wait_elfin_task_finish()
 
                 star.agv_go_pick()                
@@ -277,12 +282,16 @@ class QingDaoProcedure(object):
 
                 star.wait_agv_task_finish()
                 
-                star.elfin_pick(2)
+                star.elfin_pick( block_id )
                 star.wait_elfin_task_finish()
                 star.agv_go_place()
 
                 agv.leave_right()
                 agv.go_station("left")
+
+                block_id_index = (block_id_index + 1) % n_block_id
+                block_id = block_id_list[block_id_index]
+                
                 pass
             else:
                 star.agv_go_place()
