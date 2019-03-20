@@ -34,11 +34,12 @@ class QingDaoProcedure(object):
                                          self.__archive_dir ,
                                          self.__max_log_size )
         self.__agv_manager = AgvManager()
-        self.__star_manager = StarManager()
+        #self.__star_manager = StarManager()
+        self.__star_manager = None
         self.__line_manager = LineManager()
         
         self.__managers = [ self.__agv_manager ,
-                            self.__star_manager ,
+                            #self.__star_manager ,
                             self.__line_manager 
                           ]
         
@@ -176,8 +177,8 @@ class QingDaoProcedure(object):
     def __update_param(self, config_data):
         if("agv" in config_data):
             self.__agv_manager.update_param(config_data["agv"])
-        if("star" in config_data):
-            self.__star_manager.update_param(config_data["star"])
+        #if("star" in config_data):
+        #    self.__star_manager.update_param(config_data["star"])
         if("line" in config_data):
             self.__line_manager.update_param(config_data["line"])
         
@@ -228,13 +229,13 @@ class QingDaoProcedure(object):
         
         while True:
             
-            if True:
+            if False:
                 star.wait_agv_task_finish()
 
                 star.agv_go_place()                
                 star.wait_agv_task_finish()
                 
-                star.elfin_place(2)
+                star.elfin_place(1)
                 star.wait_elfin_task_finish()
 
                 star.agv_go_pick()                
@@ -275,7 +276,7 @@ class QingDaoProcedure(object):
 
                 star.wait_agv_task_finish()
                 
-                star.elfin_pick(2)
+                star.elfin_place(2)
                 star.wait_elfin_task_finish()
                 star.agv_go_place()
 
@@ -283,20 +284,20 @@ class QingDaoProcedure(object):
                 agv.go_station("left")
                 pass
             else:
-                star.agv_go_place()
-                star.wait_agv_task_finish()
+                #star.agv_go_place()
+                #star.wait_agv_task_finish()
                 
-                star.elfin_place(1)
-                star.wait_elfin_task_finish()
+                #star.elfin_place(1)
+                #star.wait_elfin_task_finish()
                 
                 agv.leave_left()
                 agv.go_station("right")
                 
-                star.agv_go_pick()
-                star.wait_agv_task_finish()
+                #star.agv_go_pick()
+                #star.wait_agv_task_finish()
                 
-                star.elfin_place(2)
-                star.wait_elfin_task_finish()
+                #star.elfin_place(2)
+                #star.wait_elfin_task_finish()
                 
                 agv.leave_right()
                 agv.go_station("left")
@@ -320,9 +321,9 @@ class QingDaoProcedure(object):
         
         self.Log.info("Start initialize device states")
         
-        star.elfin_ready()
-        star.wait_elfin_task_finish()
-        star.agv_go_ready()
+        #star.elfin_ready()
+        #star.wait_elfin_task_finish()
+        #star.agv_go_ready()
         
         line.stop_line()
         agv.stop_line()
@@ -348,7 +349,7 @@ class QingDaoProcedure(object):
             
         #star.check_goods()
         
-        star.wait_agv_task_finish()
+        #star.wait_agv_task_finish()
 
         self.Log.info("Initialized.")
         
@@ -368,8 +369,8 @@ if "__main__" == __name__:
     max_size = bytes_per_day_guess * log_keep_day
 
     proc = QingDaoProcedure( root_dir = pydir(),
-                             log_dir = "log",
-                             archive_dir = "log_archive",
+                             log_dir = "log.temp.agv_line",
+                             archive_dir = "log_archive.temp.agv_line",
                              max_log_size = max_size )
     proc.load_config( config_file_name = "qingdao_config.json" )
     proc.start()

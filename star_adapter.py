@@ -46,10 +46,10 @@ class StarCommand(object):
     class ElfinTask(object):
         NO_TASK = 0
         READY = 1
-        PLACE_TRIANGLE = 2
-        PLACE_SQUARE = 3
-        PICK_TRIANGLE = 4
-        PICK_SQUARE = 5
+        PLACE_1 = 2
+        PLACE_2 = 3
+        PICK_1 = 4
+        PICK_2 = 5
 
         
 class StarState(object):
@@ -492,9 +492,9 @@ class StarAdapter(object):
 
     def elfin_place(self, block=1):
         if(block == 1):
-            self.elfin_add_task( task_type = StarCommand.ElfinTask.PLACE_TRIANGLE )
+            self.elfin_add_task( task_type = StarCommand.ElfinTask.PLACE_1 )
         elif(block == 2):
-            self.elfin_add_task( task_type = StarCommand.ElfinTask.PLACE_SQUARE )
+            self.elfin_add_task( task_type = StarCommand.ElfinTask.PLACE_2 )
         else:
             self.Log.error("elfin_place(): block ID [%d] invalid. "
                            "Only 2 blocks available."
@@ -502,9 +502,9 @@ class StarAdapter(object):
 
     def elfin_pick(self, block=1):
         if(block == 1):
-            self.elfin_add_task( task_type = StarCommand.ElfinTask.PICK_TRIANGLE )
+            self.elfin_add_task( task_type = StarCommand.ElfinTask.PICK_1 )
         elif(block == 2):
-            self.elfin_add_task( task_type = StarCommand.ElfinTask.PICK_SQUARE )
+            self.elfin_add_task( task_type = StarCommand.ElfinTask.PICK_2 )
         else:
             self.Log.error("elfin_pick(): block ID [%d] invalid. "
                            "Only 2 blocks available."
