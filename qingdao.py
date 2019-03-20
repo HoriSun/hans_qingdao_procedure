@@ -244,8 +244,10 @@ class QingDaoProcedure(object):
                 line.wait_sensor_state("left","middle",1)
                 if(line.get_sensor_state("left","agv")!=1):
                     #agv.go_station("left")
+                    line.line_roll_left_stop()
                     self.Log.info("AGV is not at the left station. waiting") ### [ TODO ] Actually the AGV blocks when "go_left()" or "go_right()" is called. Make them asyncronized.
                     line.wait_sensor_state("left","agv",1)
+                    line.line_roll_left_start()
                 agv.start_line()
                 line.wait_sensor_state("left","front",1)
                 agv.wait_sensor_state("front",1)
